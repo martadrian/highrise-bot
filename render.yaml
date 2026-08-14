@@ -2,8 +2,5 @@ services:
   - type: web
     name: highrise-bot
     runtime: python-3.11.9
-    buildCommand: bash build.sh
+    buildCommand: pip install -r requirements.txt
     startCommand: python run.py
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11
