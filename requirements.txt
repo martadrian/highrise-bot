@@ -2,4 +2,3 @@
 highrise-bot-sdk==23.3.4
 google-genai==2.4.0
 python-dotenv==1.0.1
-pydantic==2.7.0
