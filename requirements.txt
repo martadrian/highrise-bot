@@ -1,0 +1,4 @@
+# Highrise All-in-One Bot Requirements
+highrise-bot-sdk>=23.1.0
+google-genai>=0.1.0
+python-dotenv>=1.0.0
