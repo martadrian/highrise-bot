@@ -1,4 +1,7 @@
 # Highrise All-in-One Bot Requirements
 highrise-bot-sdk>=24.0.0
-google-genai>=2.10.0
 python-dotenv>=1.0.0
+
+# Optional: Uncomment below for AI chatbot feature (!ai command)
+# Note: Requires updating highrise-bot-sdk when installing google-genai
+# google-genai>=2.10.0
