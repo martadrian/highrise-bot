@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,4 +17,4 @@ if not room_id or room_id == "YOUR_ROOM_ID_HERE":
     exit(1)
 
 print(f"[INFO] Starting Highrise Bot for room {room_id}...")
-subprocess.run(["py", "-m", "highrise", "bot:UltimateBot", room_id, token])
+subprocess.run([sys.executable, "-m", "highrise", "bot:UltimateBot", room_id, token], check=True)
