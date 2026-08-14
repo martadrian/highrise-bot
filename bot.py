@@ -17,13 +17,6 @@ from highrise.__main__ import main
 # Load environment variables
 load_dotenv()
 
-# Try importing google.genai for AI Chatbot support
-try:
-    from google import genai
-    GEMINI_AVAILABLE = True
-except ImportError:
-    GEMINI_AVAILABLE = False
-
 # Popular Highrise Emotes dictionary mapping friendly names to emote IDs
 EMOTE_DICT = {
     "wave": "emote-wave",
@@ -51,15 +44,8 @@ class UltimateBot(BaseBot):
         self.looping_emotes = {}  # {user_id: task}
         self.saved_locations = {} # {location_name: Position}
         
-        # Initialize Gemini Client if key exists
-        self.ai_client = None
-        gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
-        if GEMINI_AVAILABLE and gemini_key and gemini_key != "YOUR_GEMINI_API_KEY_HERE":
-            try:
-                self.ai_client = genai.Client(api_key=gemini_key)
-                print("✨ Gemini AI Chatbot initialized successfully!")
-            except Exception as e:
-                print(f"⚠️ Could not initialize Gemini AI: {e}")
+        # AI module intentionally disabled for compatibility. Use the rest of the bot features as-is.
+        self.ai_enabled = False
 
     async def on_start(self, session_metadata) -> None:
         """Triggered when the bot connects to the Highrise room."""
@@ -187,41 +173,6 @@ class UltimateBot(BaseBot):
             else:
                 await self.highrise.send_whisper(user.id, f"❌ User @{target_username} not found in room.")
 
-        # -----------------------------
-        # 5. AI CHATBOT INTEGRATION
-        # -----------------------------
-        elif msg.lower().startswith("!ai ") or "bot" in msg.lower():
-            prompt = msg[4:].strip() if msg.lower().startswith("!ai ") else msg
-            await self._handle_ai_response(user, prompt)
-
-    async def _handle_ai_response(self, user: User, prompt: str):
-        """Send query to Gemini AI and respond to user."""
-        if not self.ai_client:
-            await self.highrise.chat(
-                f"🤖 @{user.username}, my AI brain key (GEMINI_API_KEY) is not set yet in .env! "
-                "Please configure it to activate AI chat."
-            )
-            return
-
-        try:
-            sys_instruction = (
-                "You are an energetic, polite, and helpful avatar AI assistant inside Highrise virtual world. "
-                "Keep responses concise (under 250 characters) so they fit easily in game chat."
-            )
-            response = self.ai_client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=f"User @{user.username} says: {prompt}",
-                config={"system_instruction": sys_instruction}
-            )
-            reply = response.text.strip() if response.text else "I'm thinking..."
-            # Highrise chat limit safety
-            if len(reply) > 250:
-                reply = reply[:247] + "..."
-            await self.highrise.chat(f"🤖 {reply}")
-        except Exception as e:
-            print(f"AI Error: {e}")
-            await self.highrise.chat(f"🤖 @{user.username}, I'm having trouble processing that right now!")
-
     async def _loop_emote_task(self, user_id: str, emote_id: str):
         """Background task for looping an emote for a user every 9 seconds."""
         try:
@@ -234,13 +185,10 @@ class UltimateBot(BaseBot):
     async def on_whisper(self, user: User, message: str) -> None:
         """Handle private whisper messages."""
         msg = message.strip()
-        if msg.lower().startswith("!ai "):
-            await self._handle_ai_response(user, msg[4:])
-        else:
-            await self.highrise.send_whisper(
-                user.id, 
-                "Hi! I received your whisper. Type !help in room chat for my commands or '!ai <prompt>' to ask me anything!"
-            )
+        await self.highrise.send_whisper(
+            user.id,
+            "Hi! I received your whisper. Type !help in room chat for my commands."
+        )
 
     async def on_tip(self, sender: User, receiver: User, tip) -> None:
         """Handle tip reactions in the room."""
