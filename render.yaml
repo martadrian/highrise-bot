@@ -1,5 +1,5 @@
 services:
-  - type: web
+  - type: worker
     name: highrise-bot
     runtime: python-3.11.9
     buildCommand: pip install -r requirements.txt
