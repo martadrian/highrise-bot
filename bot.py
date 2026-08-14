@@ -10,6 +10,8 @@ Features:
 
 import os
 import asyncio
+import json
+from urllib import request, error
 from dotenv import load_dotenv
 from highrise import BaseBot, User, Position, AnchorPosition, Reaction
 from highrise.__main__ import main
@@ -43,9 +45,7 @@ class UltimateBot(BaseBot):
         self.bot_name = "HighriseBot"
         self.looping_emotes = {}  # {user_id: task}
         self.saved_locations = {} # {location_name: Position}
-        
-        # AI module intentionally disabled for compatibility. Use the rest of the bot features as-is.
-        self.ai_enabled = False
+        self.ai_enabled = bool(os.getenv("GEMINI_API_KEY", "").strip())
 
     async def on_start(self, session_metadata) -> None:
         """Triggered when the bot connects to the Highrise room."""
@@ -92,6 +92,18 @@ class UltimateBot(BaseBot):
                 "• !tip <amount> - Tip gold to user (if bot has permission)"
             )
             await self.highrise.send_whisper(user.id, help_text)
+            return
+
+        elif msg.lower().startswith("!ai "):
+            prompt = msg[4:].strip()
+            if not prompt:
+                await self.highrise.send_whisper(user.id, "❌ Usage: !ai <your message>")
+                return
+            if not self.ai_enabled:
+                await self.highrise.send_whisper(user.id, "🤖 Gemini is not configured yet. Add GEMINI_API_KEY to your environment.")
+                return
+            response = await self._generate_ai_reply(prompt)
+            await self.highrise.send_whisper(user.id, response)
             return
 
         elif msg.lower() == "!wallet":
@@ -172,6 +184,43 @@ class UltimateBot(BaseBot):
                     await self.highrise.send_whisper(user.id, f"❌ Failed to kick @{target_username}. Make sure the bot is room moderator/owner.")
             else:
                 await self.highrise.send_whisper(user.id, f"❌ User @{target_username} not found in room.")
+
+    async def _generate_ai_reply(self, prompt: str) -> str:
+        """Generate an AI response using the Gemini REST API."""
+        api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        if not api_key:
+            return "🤖 Gemini is not configured for this bot."
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }],
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 300
+            }
+        }
+
+        data = json.dumps(payload).encode("utf-8")
+        req = request.Request(url, data=data, headers={"Content-Type": "application/json"})
+
+        try:
+            with request.urlopen(req, timeout=20) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+        except error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="ignore")
+            return f"🤖 Gemini API error: {detail[:300]}"
+        except Exception as exc:
+            return f"🤖 AI request failed: {exc}"
+
+        candidates = body.get("candidates", [])
+        if not candidates:
+            return "🤖 I didn't get a valid reply from Gemini."
+
+        parts = candidates[0].get("content", {}).get("parts", [])
+        response_text = "".join(part.get("text", "") for part in parts if isinstance(part, dict))
+        return response_text.strip() or "🤖 I couldn't generate a reply right now."
 
     async def _loop_emote_task(self, user_id: str, emote_id: str):
         """Background task for looping an emote for a user every 9 seconds."""
